@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quản Lý Thu Nhập Ca Làm</title>
+  <!-- Chart.js để vẽ sơ đồ thống kê -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger-color: #dc2626;
+      --danger-hover: #b91c1c;
+      --text-main: #1e293b;
+      --text-sub: #64748b;
+      --border-color: #cbd5e1;
+      --base-font-size: 15px;
+      --radius: 8px;
+    }
+
+    body.dark-mode {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding: 16px; font-size: var(--base-font-size); transition: background-color 0.2s; }
+
+    .app-container { max-width: 950px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    
+    /* Header */
+    header { 
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      flex-wrap: wrap; 
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    header h1 { font-size: 1.4em; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .api-badge { 
+      background: rgba(37, 99, 235, 0.1); 
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color); 
+      padding: 6px 12px; 
+      border-radius: 6px;
+      font-weight: 700; 
+      font-size: 0.85em; 
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Tabs Nav */
+    .tab-nav { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); padding-bottom: 2px; }
+    .tab-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-bottom: none;
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 10px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-sub);
+      font-size: 0.9em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--primary-color);
+      color: #ffffff;
+      border-color: var(--primary-color);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Cards & Boxes */
+    .box { 
+      background: var(--card-bg); 
+      padding: 20px; 
+      border: 1px solid var(--border-color); 
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .box h2 { 
+      font-size: 1.05em; 
+      font-weight: 700; 
+      margin-bottom: 14px; 
+      border-bottom: 1px solid var(--border-color); 
+      padding-bottom: 8px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px;
+    }
+
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .stat-card { background: var(--card-bg); padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius); }
+    .stat-card .label { font-size: 0.8em; font-weight: 600; color: var(--text-sub); text-transform: uppercase; margin-bottom: 4px; }
+    .stat-card .value { font-size: 1.4em; font-weight: 700; color: var(--primary-color); }
+
+    /* Main Content Layout */
+    .content-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 768px) { .content-grid { grid-template-columns: 340px 1fr; } }
+
+    /* Form Inputs */
+    form { display: flex; flex-direction: column; gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.85em; font-weight: 600; color: var(--text-main); }
+    input, select { 
+      width: 100%; 
+      padding: 10px; 
+      font-size: 0.95em; 
+      border: 1px solid var(--border-color); 
+      border-radius: 6px; 
+      outline: none; 
+      background: var(--card-bg); 
+      color: var(--text-main); 
+    }
+    input:focus, select:focus { border-color: var(--primary-color); }
+
+    /* Custom Input Date Container */
+    .date-picker-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .date-picker-wrapper input[type="date"] {
+      font-weight: 700;
+      font-size: 1em;
+      padding: 10px 40px 10px 12px;
+      cursor: pointer;
+      color-scheme: light dark;
+    }
+    .date-picker-icon {
+      position: absolute;
+      right: 12px;
+      pointer-events: none;
+      color: var(--primary-color);
+    }
+    .btn-today {
+      align-self: flex-end;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      padding: 3px 8px;
+      font-size: 0.75em;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .btn-today:hover {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 16px;
+      font-size: 0.9em;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: 0.2s;
+    }
+    .btn-main { background: var(--primary-color); color: #ffffff; }
+    .btn-main:hover { background: var(--primary-hover); }
+    .btn-del { background: transparent; color: var(--danger-color); border-color: var(--danger-color); padding: 4px 8px; font-size: 0.8em; }
+    .btn-del:hover { background: var(--danger-color); color: #ffffff; }
+
+    /* Custom Table with Scroll Container */
+    .table-scroll-container {
+      max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em; }
+    th { position: sticky; top: 0; background: var(--bg-color); z-index: 1; font-weight: 700; border-bottom: 1px solid var(--border-color); padding: 10px; }
+    td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    
+    .amount-cell { font-weight: 700; color: var(--primary-color); }
+    .sub-note { font-size: 0.8em; color: var(--text-sub); margin-top: 2px; font-style: italic; }
+
+    /* AI Advice Box */
+    .advice-box {
+      background: rgba(37, 99, 235, 0.05);
+      border-left: 4px solid var(--primary-color);
+      padding: 14px;
+      border-radius: 0 6px 6px 0;
+      margin-top: 14px;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+
+    /* Notification Popup (Toast) */
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--text-main);
+      color: var(--bg-color);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9em;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .setting-item { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px dashed var(--border-color); }
+    .setting-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+  <div id="toast">Thông báo</div>
+
+  <div class="app-container">
+    <header>
+      <h1>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        QUẢN LÝ THU NHẬP
+      </h1>
+      <div class="api-badge">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+        API JSONBin: <span id="apiCount">9986</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('incomeTab', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        Thu Nhập
+      </button>
+      <button class="tab-btn" onclick="switchTab('statsTab', this); renderChart();">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Thống Kê
+      </button>
+      <button class="tab-btn" onclick="switchTab('settingTab', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Cài Đặt
+      </button>
+    </div>
+
+    <!-- TAB 1: THU NHẬP -->
+    <div id="incomeTab" class="tab-content active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Số Dư Tích Lũy</div>
+          <div class="value" id="totalBalance">0 đ</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Tổng Thu Ca Làm</div>
+          <div class="value" id="totalIncome">0 đ</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Trung Bình / Ngày</div>
+          <div class="value" id="avgDaily" style="color: #8b5cf6;">0 đ</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <!-- Form nhập -->
+        <div class="box">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Thêm Thu Nhập
+          </h2>
+          <form id="incomeForm">
+            <div class="form-group">
+              <label for="date">Ngày làm việc</label>
+              <div class="date-picker-wrapper">
+                <input type="date" id="date" onclick="this.showPicker && this.showPicker()" required>
+                <svg class="date-picker-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <button type="button" class="btn-today" onclick="setTodayDate()">📅 Hôm nay</button>
+            </div>
+            <div class="form-group">
+              <label for="source">Ca / Nguồn thu</label>
+              <select id="source" required>
+                <option value="Ca 3 tiếng">Ca 3 tiếng</option>
+                <option value="Ca 5 tiếng">Ca 5 tiếng</option>
+                <option value="Ca 8 tiếng">Ca 8 tiếng</option>
+                <option value="Thưởng ca / Chạy thêm">Thưởng / Chạy thêm</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="amount">Số tiền (VND)</label>
+              <input type="number" id="amount" placeholder="150000" required>
+            </div>
+            <div class="form-group">
+              <label for="note">Ghi chú thêm (Không bắt buộc)</label>
+              <input type="text" id="note" placeholder="Nhập ghi chú nhỏ...">
+            </div>
+            <button type="submit" class="btn btn-main" id="submitBtn">Lưu Thu Nhập</button>
+          </form>
+        </div>
+
+        <!-- Bảng danh sách có cuộn -->
+        <div class="box">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Lịch Sử Thu Nhập
+          </h2>
+          <div class="table-scroll-container">
+            <table id="incomeTable">
+              <thead>
+                <tr>
+                  <th>Ngày</th>
+                  <th>Ca làm</th>
+                  <th>Số tiền & Ghi chú</th>
+                  <th style="text-align: center;">Xóa</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: THỐNG KÊ & SƠ ĐỒ -->
+    <div id="statsTab" class="tab-content">
+      <div class="box">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Sơ Đồ Thu Nhập Theo Ngày
+        </h2>
+        <div style="position: relative; height: 300px; width: 100%;">
+          <canvas id="incomeChart"></canvas>
+        </div>
+      </div>
+
+      <div class="box">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Đánh Giá & Nhận Xét Thu Nhập
+        </h2>
+        <div id="aiAdviceText" class="advice-box">
+          Đang phân tích dữ liệu ca làm của bạn...
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CÀI ĐẶT -->
+    <div id="settingTab" class="tab-content">
+      <div class="box" style="display: flex; flex-direction: column; gap: 16px;">
+        <h2>Cài Đặt & Giao Diện</h2>
+
+        <div class="setting-item">
+          <label>Chế độ giao diện</label>
+          <div>
+            <button class="btn btn-main" onclick="toggleDarkMode()" id="darkModeBtn" style="background: var(--text-main); color: var(--bg-color);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              Chuyển Sang Chế Độ Tối
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label for="initialBalanceInput">Số dư sẵn có ban đầu (VND)</label>
+          <div style="display: flex; gap: 10px; max-width: 400px;">
+            <input type="number" id="initialBalanceInput" placeholder="0">
+            <button class="btn btn-main" style="width: 120px;" onclick="saveInitialBalance()" id="saveBalanceBtn">Lưu</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>Kích thước chữ (Font Size)</label>
+          <select id="fontSizeSelect" style="max-width: 250px;" onchange="changeFontSize(this.value)">
+            <option value="13px">Nhỏ (13px)</option>
+            <option value="15px" selected>Vừa - Mặc định (15px)</option>
+            <option value="17px">Lớn (17px)</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label style="color: var(--danger-color);">Xóa toàn bộ dữ liệu JSONBin</label>
+          <div>
+            <button class="btn btn-del" style="padding: 10px 16px; font-size: 0.9em;" onclick="resetAllData()">⚠️ Xóa tất cả dữ liệu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BIN_ID = '6a88b3c1da38895dfe012992';
+    const SECRET_KEY = '$2a$10$YX/g5bIXDZIIezrM57wSLez0S6s3uBfKCCiBGMiZwkOBtH02TTvQm';
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    
+    let remainingAPI = localStorage.getItem('jsonbin_api_count') ? Number(localStorage.getItem('jsonbin_api_count')) : 9986;
+    let dbData = { initialBalance: 0, incomes: [] };
+    let chartInstance = null;
+
+    // Tự động điền ngày hôm nay chính xác định dạng YYYY-MM-DD
+    function setTodayDate() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${year}-${month}-${day}`;
+    }
+
+    setTodayDate();
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }
+
+    function useAPI() {
+      remainingAPI--;
+      localStorage.setItem('jsonbin_api_count', remainingAPI);
+      document.getElementById('apiCount').innerText = remainingAPI;
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      document.getElementById('darkModeBtn').innerHTML = isDark ? 
+        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Chuyển Sang Chế Độ Sáng` : 
+        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Chuyển Sang Chế Độ Tối`;
+      localStorage.setItem('theme_mode', isDark ? 'dark' : 'light');
+      showToast(isDark ? 'Đã bật chế độ Tối' : 'Đã bật chế độ Sáng');
+      if (chartInstance) renderChart();
+    }
+
+    function changeFontSize(size) {
+      document.documentElement.style.setProperty('--base-font-size', size);
+      localStorage.setItem('font_size', size);
+      showToast('Đã chỉnh kích thước chữ');
+    }
+
+    function loadLocalSettings() {
+      if (localStorage.getItem('theme_mode') === 'dark') toggleDarkMode();
+      if (localStorage.getItem('font_size')) {
+        const sz = localStorage.getItem('font_size');
+        document.documentElement.style.setProperty('--base-font-size', sz);
+        document.getElementById('fontSizeSelect').value = sz;
+      }
+      document.getElementById('apiCount').innerText = remainingAPI;
+    }
+
+    async function loadData() {
+      try {
+        useAPI();
+        const res = await fetch(API_URL + '/latest', {
+          headers: { 'X-Master-Key': SECRET_KEY }
+        });
+        const result = await res.json();
+        const record = result.record;
+        
+        if (Array.isArray(record)) {
+          dbData.incomes = record;
+          dbData.initialBalance = 0;
+        } else if (record && typeof record === 'object') {
+          dbData.incomes = Array.isArray(record.incomes) ? record.incomes : [];
+          dbData.initialBalance = Number(record.initialBalance) || 0;
+        }
+
+        document.getElementById('initialBalanceInput').value = dbData.initialBalance;
+        renderUI();
+      } catch (err) {
+        showToast('Lỗi tải dữ liệu JSONBin!');
+      }
+    }
+
+    function renderUI() {
+      const tbody = document.querySelector('#incomeTable tbody');
+      tbody.innerHTML = '';
+      
+      let incomeTotal = 0;
+      const uniqueDates = new Set();
+
+      [...dbData.incomes].reverse().forEach((item, reverseIndex) => {
+        const originalIndex = dbData.incomes.length - 1 - reverseIndex;
+        const amount = Number(item.amount) || 0;
+        incomeTotal += amount;
+        if (item.date) uniqueDates.add(item.date);
+
+        const tr = `<tr>
+          <td><strong>${item.date}</strong></td>
+          <td>${item.source}</td>
+          <td>
+            <div class="amount-cell">+${amount.toLocaleString('vi-VN')} đ</div>
+            ${item.note ? `<div class="sub-note">📌 ${item.note}</div>` : ''}
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-del" onclick="deleteItem(${originalIndex})">Xóa</button>
+          </td>
+        </tr>`;
+        tbody.innerHTML += tr;
+      });
+
+      const totalBalance = dbData.initialBalance + incomeTotal;
+      const totalDays = uniqueDates.size || 1;
+      const avgDaily = Math.round(incomeTotal / totalDays);
+
+      document.getElementById('totalBalance').innerText = `${totalBalance.toLocaleString('vi-VN')} đ`;
+      document.getElementById('totalIncome').innerText = `${incomeTotal.toLocaleString('vi-VN')} đ`;
+      document.getElementById('avgDaily').innerText = `${avgDaily.toLocaleString('vi-VN')} đ/ngày`;
+      
+      generateAdvice(avgDaily, totalDays, incomeTotal);
+    }
+
+    // Vẽ sơ đồ thống kê Chart.js
+    function renderChart() {
+      const ctx = document.getElementById('incomeChart').getContext('2d');
+      
+      const dailyMap = {};
+      dbData.incomes.forEach(item => {
+        if (!dailyMap[item.date]) dailyMap[item.date] = 0;
+        dailyMap[item.date] += Number(item.amount) || 0;
+      });
+
+      const labels = Object.keys(dailyMap).sort();
+      const dataValues = labels.map(date => dailyMap[date]);
+
+      if (chartInstance) chartInstance.destroy();
+
+      const isDark = document.body.classList.contains('dark-mode');
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels.length ? labels : ['Chưa có dữ liệu'],
+          datasets: [{
+            label: 'Thu Nhập (VND)',
+            data: dataValues.length ? dataValues : [0],
+            backgroundColor: '#2563eb',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: isDark ? '#f8fafc' : '#1e293b' } }
+          },
+          scales: {
+            x: { ticks: { color: isDark ? '#94a3b8' : '#64748b' }, grid: { display: false } },
+            y: { ticks: { color: isDark ? '#94a3b8' : '#64748b' }, grid: { color: isDark ? '#334155' : '#e2e8f0' } }
+          }
+        }
+      });
+    }
+
+    // Đánh giá thu nhập tự động
+    function generateAdvice(avg, days, total) {
+      const adviceEl = document.getElementById('aiAdviceText');
+      if (total === 0) {
+        adviceEl.innerHTML = "💡 <b>Chưa có ghi nhận:</b> Hãy bắt đầu lưu các ca làm đầu tiên để xem phân tích tài chính nhé!";
+        return;
+      }
+
+      let comment = `📊 Bạn đã ghi nhận thu nhập trong <b>${days} ngày làm việc</b> với tổng số tiền <b>${total.toLocaleString('vi-VN')} đ</b>.<br>`;
+      comment += `👉 Trung bình mỗi ngày làm việc bạn kiếm được <b>${avg.toLocaleString('vi-VN')} đ/ngày</b>.<br><br>`;
+
+      if (avg >= 300000) {
+        comment += "🌟 <b>Đánh giá: Mức thu nhập rất tốt!</b> Bạn đang tối ưu ca làm rất hiệu quả. Hãy duy trì tiến độ và trích khoảng 20-30% vào quỹ tiết kiệm cá nhân nhé.";
+      } else if (avg >= 150000) {
+        comment += "👍 <b>Đánh giá: Mức thu nhập Khá - Tốt.</b> Thu nhập ổn định cho công việc ca làm. Nếu muốn tăng thêm, bạn có thể cân nhắc nhận thêm các ca thưởng hoặc chạy ca cao điểm.";
+      } else {
+        comment += "💡 <b>Đánh giá: Mức thu nhập Trung bình.</b> Tần suất hoặc giá trị ca làm chưa cao. Bạn nên đăng ký thêm ca 5h - 8h hoặc xếp lịch đi làm đều đặn hơn để cải thiện thu nhập.";
+      }
+
+      adviceEl.innerHTML = comment;
+    }
+
+    async function updateBin() {
+      useAPI();
+      await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': SECRET_KEY
+        },
+        body: JSON.stringify(dbData)
+      });
+    }
+
+    async function saveInitialBalance() {
+      const btn = document.getElementById('saveBalanceBtn');
+      const val = Number(document.getElementById('initialBalanceInput').value) || 0;
+      dbData.initialBalance = val;
+
+      btn.innerText = 'Đang lưu...';
+      try {
+        await updateBin();
+        renderUI();
+        showToast('Đã lưu số dư ban đầu!');
+      } catch (err) {
+        showToast('Lưu thất bại!');
+      } finally {
+        btn.innerText = 'Lưu';
+      }
+    }
+
+    async function deleteItem(index) {
+      if (confirm('Xác nhận xóa ca làm này?')) {
+        dbData.incomes.splice(index, 1);
+        try {
+          await updateBin();
+          renderUI();
+          showToast('Đã xóa thành công!');
+        } catch (err) {
+          showToast('Xóa thất bại!');
+        }
+      }
+    }
+
+    async function resetAllData() {
+      if (confirm('⚠️ CẢNH BÁO: Thao tác này sẽ XÓA SẠCH toàn bộ dữ liệu trên JSONBin! Bạn có chắc không?')) {
+        dbData = { initialBalance: 0, incomes: [] };
+        try {
+          await updateBin();
+          document.getElementById('initialBalanceInput').value = 0;
+          renderUI();
+          showToast('Đã xóa sạch toàn bộ dữ liệu!');
+        } catch (err) {
+          showToast('Xóa dữ liệu thất bại!');
+        }
+      }
+    }
+
+    document.getElementById('incomeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = 'Đang lưu...';
+      btn.disabled = true;
+
+      const newItem = {
+        date: document.getElementById('date').value,
+        source: document.getElementById('source').value,
+        amount: document.getElementById('amount').value,
+        note: document.getElementById('note').value.trim()
+      };
+
+      dbData.incomes.push(newItem);
+
+      try {
+        await updateBin();
+        document.getElementById('incomeForm').reset();
+        setTodayDate();
+        renderUI();
+        showToast('Đã thêm ca làm thành công!');
+      } catch (err) {
+        showToast('Lưu thất bại, thử lại sau!');
+      } finally {
+        btn.innerText = 'Lưu Thu Nhập';
+        btn.disabled = false;
+      }
+    });
+
+    loadLocalSettings();
+    loadData();
+  </script>
+</body>
+</html>
