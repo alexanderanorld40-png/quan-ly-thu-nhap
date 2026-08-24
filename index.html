@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Quản Lý Thu Nhập Ca Làm</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
     /* ===== RESET & ROOT ===== */
     :root {
@@ -47,7 +48,7 @@
     .icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .icon svg { display: block; }
 
-    /* ===== INTRO PAGE 3D ===== */
+    /* ===== INTRO PAGE ===== */
     #introPage {
       position: fixed;
       inset: 0;
@@ -57,12 +58,12 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      transition: opacity 0.8s ease, transform 0.8s ease;
+      transition: opacity 1.2s ease, transform 1.2s ease;
       perspective: 1200px;
     }
     #introPage.hidden {
       opacity: 0;
-      transform: scale(1.1) rotateX(5deg);
+      transform: scale(1.05);
       pointer-events: none;
     }
 
@@ -116,27 +117,6 @@
       font-size: 1.1rem;
       font-weight: 400;
       letter-spacing: 2px;
-      margin-bottom: 40px;
-    }
-
-    .intro-btn {
-      padding: 16px 48px;
-      border: none;
-      border-radius: 50px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-light));
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 8px 32px rgba(108, 99, 255, 0.35);
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .intro-btn:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 12px 48px rgba(108, 99, 255, 0.5);
     }
 
     .particles {
@@ -173,7 +153,7 @@
       margin: 0 auto;
       padding: 20px;
       display: none;
-      animation: fadeInUp 0.6s ease;
+      animation: fadeInUp 0.8s ease;
     }
     .app-container.visible { display: block; }
     @keyframes fadeInUp {
@@ -546,35 +526,72 @@
       box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
     }
 
-    /* ===== TOAST ===== */
+    /* ===== TOAST IPHONE STYLE ===== */
     #toast {
       position: fixed;
-      bottom: 30px;
+      top: 20px;
       left: 50%;
-      transform: translateX(-50%) translateY(80px);
+      transform: translateX(-50%) translateY(-100px);
       background: var(--text-primary);
       color: var(--bg-color);
-      padding: 12px 28px;
-      border-radius: 12px;
+      padding: 14px 24px;
+      border-radius: 14px;
       font-weight: 600;
       font-size: 0.9rem;
       z-index: 999;
       opacity: 0;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 12px 48px rgba(0,0,0,0.25);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       pointer-events: none;
+      max-width: 90%;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(30, 30, 46, 0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    body.dark-mode #toast {
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f0e1a;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    #toast .icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     #toast .icon svg {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-      stroke-width: 2;
+      width: 20px;
+      height: 20px;
+      stroke: var(--primary-light);
+      stroke-width: 2.5;
       fill: none;
     }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast .toast-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #toast .toast-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      opacity: 0.7;
+      letter-spacing: 0.3px;
+    }
+    #toast .toast-msg {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 480px) {
@@ -588,12 +605,15 @@
       .setting-item { flex-direction: column; align-items: stretch; }
       .setting-item input { width: 100%; }
       .api-badge { font-size: 0.65rem; padding: 4px 10px; }
+      #toast { padding: 12px 18px; top: 12px; }
+      #toast .toast-title { font-size: 0.7rem; }
+      #toast .toast-msg { font-size: 0.85rem; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ===== INTRO PAGE 3D ===== -->
+  <!-- ===== INTRO PAGE ===== -->
   <div id="introPage">
     <div class="particles">
       <div class="particle"></div>
@@ -608,18 +628,17 @@
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       </div>
       <h1 class="intro-title">Quản Lý <span>Thu Nhập</span></h1>
-      <p class="intro-sub">Theo dõi ca làm việc • Thống kê thông minh</p>
-      <button class="intro-btn" onclick="enterApp()">
-        Bắt Đầu Ngay
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </button>
+      <p class="intro-sub">Theo dõi ca làm việc • Thống kê thông minh • Bảo mật cao</p>
     </div>
   </div>
 
-  <!-- ===== TOAST ===== -->
+  <!-- ===== TOAST IPHONE STYLE ===== -->
   <div id="toast">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
-    <span id="toastMsg">Thông báo</span>
+    <div class="toast-content">
+      <div class="toast-title">THÔNG BÁO</div>
+      <div class="toast-msg" id="toastMsg">Thông báo</div>
+    </div>
   </div>
 
   <!-- ===== APP ===== -->
@@ -632,8 +651,8 @@
         <h1>Quản Lý <span>Thu Nhập</span></h1>
       </div>
       <div class="api-badge">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
-        JSONBin: <span id="apiCount">9986</span>
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+        🔒 Mã hóa AES
       </div>
     </header>
 
@@ -825,45 +844,76 @@
 
   <script>
     // ===== CONFIG =====
-    const BIN_ID = '6a88b3c1da38895dfe012992';
-    const SECRET_KEY = '$2a$10$YX/g5bIXDZIIezrM57wSLez0S6s3uBfKCCiBGMiZwkOBtH02TTvQm';
-    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    const API_URL = 'https://api.npoint.io/079d5dc0ba2bfb796fb2';
+    const ENCRYPTION_KEY = 'MySuperSecretKey2026!@#';
 
-    let remainingAPI = localStorage.getItem('jsonbin_api_count') ? Number(localStorage.getItem('jsonbin_api_count')) : 9986;
     let dbData = { initialBalance: 0, incomes: [] };
     let chartInstance = null;
 
-    // ===== INTRO =====
-    function enterApp() {
+    // ===== MÃ HÓA / GIẢI MÃ =====
+    function encryptData(data) {
+      const jsonStr = JSON.stringify(data);
+      return CryptoJS.AES.encrypt(jsonStr, ENCRYPTION_KEY).toString();
+    }
+
+    function decryptData(encrypted) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(encrypted, ENCRYPTION_KEY);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decrypted) throw new Error('Decryption failed');
+        return JSON.parse(decrypted);
+      } catch (e) {
+        console.error('Lỗi giải mã:', e);
+        return null;
+      }
+    }
+
+    // ===== INTRO - TỰ ĐỘNG BIẾN MẤT SAU 2.5s =====
+    function hideIntro() {
       const intro = document.getElementById('introPage');
       intro.classList.add('hidden');
       const app = document.getElementById('appContainer');
-      app.classList.add('visible');
-      setTimeout(() => { intro.style.display = 'none'; }, 800);
+      setTimeout(() => {
+        app.classList.add('visible');
+        intro.style.display = 'none';
+      }, 300);
       loadData();
     }
 
-    // ===== TOAST =====
-    function showToast(msg) {
+    // Tự động ẩn intro sau 2.5s
+    setTimeout(hideIntro, 2500);
+
+    // ===== TOAST IPHONE STYLE =====
+    function showToast(msg, isSuccess = true) {
       const t = document.getElementById('toast');
-      document.getElementById('toastMsg').innerText = msg;
+      const msgEl = document.getElementById('toastMsg');
+      const icon = t.querySelector('.icon svg');
+      
+      msgEl.innerText = msg;
+      
+      // Đổi màu icon theo trạng thái
+      if (isSuccess) {
+        icon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+      } else {
+        icon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`;
+      }
+      
       t.classList.add('show');
       clearTimeout(t._hide);
-      t._hide = setTimeout(() => t.classList.remove('show'), 2500);
+      t._hide = setTimeout(() => t.classList.remove('show'), 2800);
     }
 
-    function useAPI() {
-      remainingAPI--;
-      localStorage.setItem('jsonbin_api_count', remainingAPI);
-      document.getElementById('apiCount').innerText = remainingAPI;
-    }
-
-    // ===== DATE =====
-    function setTodayDate() {
+    // ===== DATE - LẤY NGÀY HÔM QUA =====
+    function getYesterdayDate() {
       const d = new Date();
-      document.getElementById('date').value = d.toISOString().split('T')[0];
+      d.setDate(d.getDate() - 1); // Lùi 1 ngày
+      return d.toISOString().split('T')[0];
     }
-    setTodayDate();
+
+    function setYesterdayDate() {
+      document.getElementById('date').value = getYesterdayDate();
+    }
+    setYesterdayDate();
 
     // ===== TABS =====
     function switchTab(tabId, btn) {
@@ -902,28 +952,56 @@
       }
       const sz = localStorage.getItem('font_size');
       if (sz) { document.body.style.fontSize = sz; document.getElementById('fontSizeSelect').value = sz; }
-      document.getElementById('apiCount').innerText = remainingAPI;
     }
     loadSettings();
 
     // ===== LOAD DATA =====
     async function loadData() {
       try {
-        useAPI();
-        const res = await fetch(API_URL + '/latest', { headers: { 'X-Master-Key': SECRET_KEY } });
+        const res = await fetch(API_URL);
         const result = await res.json();
-        const record = result.record;
-        if (Array.isArray(record)) {
-          dbData.incomes = record;
-          dbData.initialBalance = 0;
-        } else if (record && typeof record === 'object') {
-          dbData.incomes = Array.isArray(record.incomes) ? record.incomes : [];
-          dbData.initialBalance = Number(record.initialBalance) || 0;
+        
+        let data;
+        if (typeof result === 'string' && result.startsWith('U2FsdGVkX1')) {
+          const decrypted = decryptData(result);
+          if (decrypted) {
+            data = decrypted;
+          } else {
+            throw new Error('Giải mã thất bại');
+          }
+        } else {
+          data = result;
         }
+
+        if (Array.isArray(data)) {
+          dbData.incomes = data;
+          dbData.initialBalance = 0;
+        } else if (data && typeof data === 'object') {
+          dbData.incomes = Array.isArray(data.incomes) ? data.incomes : [];
+          dbData.initialBalance = Number(data.initialBalance) || 0;
+        }
+        
         document.getElementById('initialBalanceInput').value = dbData.initialBalance;
         renderUI();
       } catch (err) {
-        showToast('Lỗi tải dữ liệu!');
+        showToast('Lỗi tải dữ liệu!', false);
+        console.error(err);
+      }
+    }
+
+    // ===== UPDATE DATA =====
+    async function updateData() {
+      try {
+        const encrypted = encryptData(dbData);
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(encrypted)
+        });
+        if (!res.ok) throw new Error('Lưu thất bại');
+      } catch (err) {
+        console.error(err);
+        throw err;
       }
     }
 
@@ -1023,19 +1101,6 @@
       el.innerHTML = html;
     }
 
-    // ===== API UPDATE =====
-    async function updateBin() {
-      useAPI();
-      await fetch(API_URL, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': SECRET_KEY
-        },
-        body: JSON.stringify(dbData)
-      });
-    }
-
     // ===== SAVE INITIAL BALANCE =====
     async function saveInitialBalance() {
       const btn = document.getElementById('saveBalanceBtn');
@@ -1043,10 +1108,10 @@
       dbData.initialBalance = val;
       btn.innerHTML = 'Đang lưu...';
       try {
-        await updateBin();
+        await updateData();
         renderUI();
-        showToast('Đã lưu số dư!');
-      } catch (e) { showToast('Lưu thất bại!'); }
+        showToast('✅ Đã lưu số dư!');
+      } catch (e) { showToast('❌ Lưu thất bại!', false); }
       btn.innerHTML = `<span class="icon"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Lưu`;
     }
 
@@ -1055,22 +1120,22 @@
       if (!confirm('Xóa ca làm này?')) return;
       dbData.incomes.splice(index, 1);
       try {
-        await updateBin();
+        await updateData();
         renderUI();
-        showToast('Đã xóa!');
-      } catch (e) { showToast('Xóa thất bại!'); }
+        showToast('🗑️ Đã xóa!');
+      } catch (e) { showToast('❌ Xóa thất bại!', false); }
     }
 
     // ===== RESET =====
     async function resetAllData() {
-      if (!confirm('⚠️ Xóa toàn bộ dữ liệu trên JSONBin?')) return;
+      if (!confirm('⚠️ Xóa toàn bộ dữ liệu trên npoint.io?')) return;
       dbData = { initialBalance: 0, incomes: [] };
       try {
-        await updateBin();
+        await updateData();
         document.getElementById('initialBalanceInput').value = 0;
         renderUI();
-        showToast('Đã xóa sạch dữ liệu!');
-      } catch (e) { showToast('Xóa thất bại!'); }
+        showToast('🗑️ Đã xóa sạch dữ liệu!');
+      } catch (e) { showToast('❌ Xóa thất bại!', false); }
     }
 
     // ===== FORM SUBMIT =====
@@ -1089,12 +1154,12 @@
 
       dbData.incomes.push(newItem);
       try {
-        await updateBin();
+        await updateData();
         document.getElementById('incomeForm').reset();
-        setTodayDate();
+        setYesterdayDate(); // Vẫn giữ ngày hôm qua sau khi reset
         renderUI();
-        showToast('Đã thêm ca làm!');
-      } catch (e) { showToast('Lưu thất bại!'); }
+        showToast('✅ Đã thêm ca làm!');
+      } catch (e) { showToast('❌ Lưu thất bại!', false); }
       btn.innerHTML = `
         <span class="icon"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
         Lưu Thu Nhập
