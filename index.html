@@ -546,6 +546,94 @@
       box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
     }
 
+    /* ===== CUSTOM CONFIRM MODAL ===== */
+    .custom-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .custom-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .custom-modal {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 90%;
+      max-width: 380px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: center;
+    }
+    .custom-modal-overlay.active .custom-modal {
+      transform: scale(1) translateY(0);
+    }
+    .custom-modal-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--danger);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .custom-modal-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+    .custom-modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .custom-modal-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .custom-modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .custom-modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-modal-cancel {
+      background: var(--bg-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border) !important;
+    }
+    .btn-modal-cancel:hover { background: var(--border); }
+    .btn-modal-confirm {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-modal-confirm:hover { opacity: 0.9; }
+
     /* ===== TOAST ===== */
     #toast {
       position: fixed;
@@ -616,6 +704,21 @@
     </div>
   </div>
 
+  <!-- ===== CUSTOM CONFIRM MODAL ===== -->
+  <div id="customModalOverlay" class="custom-modal-overlay">
+    <div class="custom-modal">
+      <div class="custom-modal-icon">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="custom-modal-title" id="modalTitle">Xác nhận</div>
+      <div class="custom-modal-desc" id="modalDesc">Bạn có chắc chắn muốn thực hiện hành động này không?</div>
+      <div class="custom-modal-actions">
+        <button class="btn-modal-cancel" id="modalCancelBtn">Hủy</button>
+        <button class="btn-modal-confirm" id="modalConfirmBtn">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TOAST ===== -->
   <div id="toast">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
@@ -633,7 +736,7 @@
       </div>
       <div class="api-badge">
         <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span>
-        JSONBin: <span id="apiCount">9986</span>
+        Request: <span id="apiCount">9986</span>
       </div>
     </header>
 
@@ -697,7 +800,6 @@
               <select id="source" required>
                 <option value="Ca 3 tiếng">Ca 3 tiếng</option>
                 <option value="Ca 5 tiếng">Ca 5 tiếng</option>
-                <option value="Ca 8 tiếng">Ca 8 tiếng</option>
                 <option value="Thưởng ca / Chạy thêm">Thưởng / Chạy thêm</option>
                 <option value="Khác">Khác</option>
               </select>
@@ -833,6 +935,30 @@
     let dbData = { initialBalance: 0, incomes: [] };
     let chartInstance = null;
 
+    // ===== ENCODE / DECODE (Base64 + UTF8 support) =====
+    function encodeData(dataObj) {
+      try {
+        const jsonStr = JSON.stringify(dataObj);
+        return btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode('0x' + p1);
+        }));
+      } catch (e) {
+        return btoa(JSON.stringify(dataObj));
+      }
+    }
+
+    function decodeData(encodedStr) {
+      try {
+        const binString = atob(encodedStr);
+        const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
+        const decodedStr = new TextDecoder().decode(bytes);
+        return JSON.parse(decodedStr);
+      } catch (e) {
+        // Fallback nếu dữ liệu cũ chưa mã hóa
+        try { return JSON.parse(atob(encodedStr)); } catch(err) { return null; }
+      }
+    }
+
     // ===== INTRO =====
     function enterApp() {
       const intro = document.getElementById('introPage');
@@ -841,6 +967,31 @@
       app.classList.add('visible');
       setTimeout(() => { intro.style.display = 'none'; }, 800);
       loadData();
+    }
+
+    // ===== CUSTOM MODAL CONFIRM =====
+    function showConfirmModal(title, desc, onConfirm) {
+      const overlay = document.getElementById('customModalOverlay');
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalDesc').innerText = desc;
+      overlay.classList.add('active');
+
+      const cancelBtn = document.getElementById('modalCancelBtn');
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+
+      const cleanup = () => {
+        overlay.classList.remove('active');
+        cancelBtn.onclick = null;
+        confirmBtn.onclick = null;
+        overlay.onclick = null;
+      };
+
+      cancelBtn.onclick = () => cleanup();
+      overlay.onclick = (e) => { if (e.target === overlay) cleanup(); };
+      confirmBtn.onclick = () => {
+        cleanup();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
     }
 
     // ===== TOAST =====
@@ -858,10 +1009,15 @@
       document.getElementById('apiCount').innerText = remainingAPI;
     }
 
-    // ===== DATE =====
+    // ===== DATE (UTC+7 Vietnam) =====
     function setTodayDate() {
-      const d = new Date();
-      document.getElementById('date').value = d.toISOString().split('T')[0];
+      const now = new Date();
+      // Chuyển sang giờ VN (UTC+7)
+      const vnTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"}));
+      const year = vnTime.getFullYear();
+      const month = String(vnTime.getMonth() + 1).padStart(2, '0');
+      const day = String(vnTime.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${year}-${month}-${day}`;
     }
     setTodayDate();
 
@@ -913,12 +1069,19 @@
         const res = await fetch(API_URL + '/latest', { headers: { 'X-Master-Key': SECRET_KEY } });
         const result = await res.json();
         const record = result.record;
-        if (Array.isArray(record)) {
-          dbData.incomes = record;
-          dbData.initialBalance = 0;
-        } else if (record && typeof record === 'object') {
-          dbData.incomes = Array.isArray(record.incomes) ? record.incomes : [];
-          dbData.initialBalance = Number(record.initialBalance) || 0;
+        
+        let parsedRecord = null;
+        if (record && typeof record === 'object' && record.encryptedData) {
+          parsedRecord = decodeData(record.encryptedData);
+        } else if (record && typeof record === 'object' && (record.incomes || record.initialBalance !== undefined)) {
+          parsedRecord = record; // Tương thích dữ liệu cũ chưa mã hóa
+        } else if (Array.isArray(record)) {
+          parsedRecord = { initialBalance: 0, incomes: record };
+        }
+
+        if (parsedRecord) {
+          dbData.incomes = Array.isArray(parsedRecord.incomes) ? parsedRecord.incomes : [];
+          dbData.initialBalance = Number(parsedRecord.initialBalance) || 0;
         }
         document.getElementById('initialBalanceInput').value = dbData.initialBalance;
         renderUI();
@@ -1015,7 +1178,7 @@
         return;
       }
       let html = `📊 <b>${days} ngày</b> làm việc · Tổng: <b>${total.toLocaleString('vi-VN')} đ</b><br>`;
-      html += `👉 Trung bình: <b>${avg.toLocaleString('vi-VN')} đ/ngày</b><br><br>`;
+      html += `👉 Trung bình: <b>${avg.toLocaleString('vi-VN')} đ/ngày</b> (Múi giờ UTC+7)<br><br>`;
 
       if (avg >= 300000) html += '🌟 <b>Rất tốt!</b> Thu nhập cao, duy trì tiến độ này nhé!';
       else if (avg >= 150000) html += '👍 <b>Khá ổn.</b> Thu nhập tốt cho ca làm việc.';
@@ -1023,16 +1186,17 @@
       el.innerHTML = html;
     }
 
-    // ===== API UPDATE =====
+    // ===== API UPDATE (Mã hóa JSON trước khi đẩy lên JSONBin) =====
     async function updateBin() {
       useAPI();
+      const encodedString = encodeData(dbData);
       await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-Master-Key': SECRET_KEY
         },
-        body: JSON.stringify(dbData)
+        body: JSON.stringify({ encryptedData: encodedString })
       });
     }
 
@@ -1052,25 +1216,27 @@
 
     // ===== DELETE =====
     async function deleteItem(index) {
-      if (!confirm('Xóa ca làm này?')) return;
-      dbData.incomes.splice(index, 1);
-      try {
-        await updateBin();
-        renderUI();
-        showToast('Đã xóa!');
-      } catch (e) { showToast('Xóa thất bại!'); }
+      showConfirmModal('Xóa ca làm', 'Bạn có chắc chắn muốn xóa ca làm này không?', async () => {
+        dbData.incomes.splice(index, 1);
+        try {
+          await updateBin();
+          renderUI();
+          showToast('Đã xóa!');
+        } catch (e) { showToast('Xóa thất bại!'); }
+      });
     }
 
     // ===== RESET =====
     async function resetAllData() {
-      if (!confirm('⚠️ Xóa toàn bộ dữ liệu trên JSONBin?')) return;
-      dbData = { initialBalance: 0, incomes: [] };
-      try {
-        await updateBin();
-        document.getElementById('initialBalanceInput').value = 0;
-        renderUI();
-        showToast('Đã xóa sạch dữ liệu!');
-      } catch (e) { showToast('Xóa thất bại!'); }
+      showConfirmModal('Xóa toàn bộ dữ liệu', 'Hành động này sẽ xóa sạch tất cả lịch sử thu nhập trên JSONBin. Bạn có chắc chắn?', async () => {
+        dbData = { initialBalance: 0, incomes: [] };
+        try {
+          await updateBin();
+          document.getElementById('initialBalanceInput').value = 0;
+          renderUI();
+          showToast('Đã xóa sạch dữ liệu!');
+        } catch (e) { showToast('Xóa thất bại!'); }
+      });
     }
 
     // ===== FORM SUBMIT =====
